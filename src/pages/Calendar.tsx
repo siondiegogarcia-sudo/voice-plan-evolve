@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar as CalendarIcon, Mic, Plus, LogOut } from "lucide-react";
+import { Calendar as CalendarIcon, Mic, Plus } from "lucide-react";
 import CalendarView from "@/components/CalendarView";
 import TaskList from "@/components/TaskList";
 import VoiceRecorder from "@/components/VoiceRecorder";
@@ -12,10 +12,6 @@ const Calendar = () => {
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
 
-  const handleLogout = () => {
-    // TODO: Implement logout with Lovable Cloud
-    console.log("Logout");
-  };
 
   return (
     <div className="min-h-screen gradient-subtle">
@@ -28,9 +24,6 @@ const Calendar = () => {
               TaskFlow
             </h1>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout}>
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </header>
 
