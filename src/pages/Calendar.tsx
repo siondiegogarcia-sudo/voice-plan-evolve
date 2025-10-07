@@ -19,9 +19,9 @@ const Calendar = () => {
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={logo} alt="TaskFlow" className="w-10 h-10" />
+            <img src={logo} alt="List Word in Day" className="w-10 h-10" />
             <h1 className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
-              TaskFlow
+              List Word in Day
             </h1>
           </div>
         </div>
