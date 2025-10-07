@@ -89,15 +89,18 @@ const VoiceRecorder = ({ onClose }: VoiceRecorderProps) => {
           description: "Revisa el texto antes de agregar las tareas",
         });
       };
-    } catch (error) {
-      console.error('Error transcribing audio:', error);
-      setIsProcessing(false);
-      toast({
-        title: "Error",
-        description: "No se pudo transcribir el audio",
-        variant: "destructive",
-      });
-    }
+      } catch (error) {
+        console.error('Error transcribing audio:', error);
+        setIsProcessing(false);
+        const errorMessage = error instanceof Error ? error.message : "No se pudo transcribir el audio";
+        toast({
+          title: "Error de transcripción",
+          description: errorMessage.includes("Google API") 
+            ? "Verifica que tu API key de Google Cloud esté configurada correctamente"
+            : errorMessage,
+          variant: "destructive",
+        });
+      }
   };
 
   const handleSubmit = async () => {
