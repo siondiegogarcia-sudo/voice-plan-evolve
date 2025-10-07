@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const ASSEMBLYAI_API_KEY = "3fe6016727a4426e984c3c1b1e87c098";
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -18,50 +20,99 @@ serve(async (req) => {
       throw new Error('No audio data provided');
     }
 
-    console.log('Processing audio transcription with Google Speech-to-Text...');
+    console.log('Processing audio transcription with AssemblyAI...');
 
-    // Convert base64 to binary
-    const binaryString = atob(audio);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    // Step 1: Upload the audio file to AssemblyAI
+    console.log('Uploading audio to AssemblyAI...');
+    const uploadResponse = await fetch('https://api.assemblyai.com/v2/upload', {
+      method: 'POST',
+      headers: {
+        'Authorization': ASSEMBLYAI_API_KEY,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: Uint8Array.from(atob(audio), c => c.charCodeAt(0)),
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      console.error('AssemblyAI upload error:', errorText);
+      throw new Error(`Upload error: ${errorText}`);
     }
 
-    // Google Speech-to-Text API request
-    const response = await fetch(
-      `https://speech.googleapis.com/v1/speech:recognize?key=${Deno.env.get('GOOGLE_CLOUD_API_KEY')}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          config: {
-            encoding: 'WEBM_OPUS',
-            sampleRateHertz: 48000,
-            languageCode: 'es-ES',
-            enableAutomaticPunctuation: true,
+    const uploadResult = await uploadResponse.json();
+    const audioUrl = uploadResult.upload_url;
+    console.log('Audio uploaded, URL:', audioUrl);
+
+    // Step 2: Request transcription
+    console.log('Requesting transcription...');
+    const transcriptResponse = await fetch('https://api.assemblyai.com/v2/transcript', {
+      method: 'POST',
+      headers: {
+        'Authorization': ASSEMBLYAI_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        audio_url: audioUrl,
+        language_code: 'es',
+      }),
+    });
+
+    if (!transcriptResponse.ok) {
+      const errorText = await transcriptResponse.text();
+      console.error('AssemblyAI transcription request error:', errorText);
+      throw new Error(`Transcription request error: ${errorText}`);
+    }
+
+    const transcriptData = await transcriptResponse.json();
+    const transcriptId = transcriptData.id;
+    console.log('Transcription requested, ID:', transcriptId);
+
+    // Step 3: Poll for transcription result
+    let transcriptionResult;
+    let attempts = 0;
+    const maxAttempts = 60; // 60 seconds timeout
+
+    while (attempts < maxAttempts) {
+      console.log(`Polling for transcription result (attempt ${attempts + 1})...`);
+      
+      const pollingResponse = await fetch(
+        `https://api.assemblyai.com/v2/transcript/${transcriptId}`,
+        {
+          headers: {
+            'Authorization': ASSEMBLYAI_API_KEY,
           },
-          audio: {
-            content: audio,
-          },
-        }),
+        }
+      );
+
+      if (!pollingResponse.ok) {
+        const errorText = await pollingResponse.text();
+        console.error('AssemblyAI polling error:', errorText);
+        throw new Error(`Polling error: ${errorText}`);
       }
-    );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Google Speech-to-Text API error:', errorText);
-      throw new Error(`Google API error: ${errorText}`);
+      transcriptionResult = await pollingResponse.json();
+      
+      if (transcriptionResult.status === 'completed') {
+        console.log('Transcription completed successfully');
+        break;
+      } else if (transcriptionResult.status === 'error') {
+        console.error('Transcription failed:', transcriptionResult.error);
+        throw new Error(`Transcription failed: ${transcriptionResult.error}`);
+      }
+
+      // Wait 1 second before next poll
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      attempts++;
     }
 
-    const result = await response.json();
-    console.log('Transcription result:', result);
+    if (attempts >= maxAttempts) {
+      throw new Error('Transcription timeout - took too long to complete');
+    }
 
-    const transcription = result.results?.[0]?.alternatives?.[0]?.transcript || '';
+    const transcription = transcriptionResult.text || '';
     
     if (!transcription) {
-      throw new Error('No transcription returned from Google API');
+      throw new Error('No transcription returned from AssemblyAI');
     }
 
     console.log('Transcription successful:', transcription);

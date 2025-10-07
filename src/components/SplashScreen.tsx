@@ -34,12 +34,12 @@ const SplashScreen = ({ onComplete }: SplashScreenProps) => {
         <div className="relative">
           <img
             src={logo}
-            alt="TaskFlow Logo"
+            alt="List Word in Day Logo"
             className="w-32 h-32 animate-pulse-glow"
           />
         </div>
         <h1 className="text-4xl font-bold text-primary-foreground animate-fade-in">
-          TaskFlow
+          List Word in Day
         </h1>
         <div className="flex gap-2 mt-4">
           <div className="w-2 h-2 rounded-full bg-primary-foreground animate-bounce" style={{ animationDelay: '0ms' }}></div>
